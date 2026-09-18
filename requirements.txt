@@ -1,0 +1,5 @@
+h5py
+numpy
+
+# illustris_python is already available in the IllustrisTNG Lab environment.
+# Outside the Lab, install it following the official TNG data-access docs.

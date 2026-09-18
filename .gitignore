@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Generated data can be hundreds of GiB. Never commit it.
+missing_halo_cutouts/
+*.hdf5
+*.h5
+*.part
+generation_status.json
+generation_status.json.tmp
