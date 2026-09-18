@@ -1,9 +1,16 @@
-# TNG50 halo cutout exporter
+# TNG50 galaxy-region cutout exporter
 
-This repository exports the 61 unique `(snapshot, parent halo)` cutouts needed to
-replace the currently missing TNG50-1 files. It is intended to run inside the
+This repository exports galaxy-centered regions for the 80 missing TNG50-1
+targets (in 61 unique parent FoF halos). It is intended to run inside the
 [IllustrisTNG JupyterLab](https://www.tng-project.org/data/lab/), where the full
 snapshot data and `illustris_python` are already available.
+
+By default, each output is an axis-aligned cube **300 physical kpc across**,
+centered on that target galaxy's `SubhaloPos`. Particle coordinates remain in
+their original TNG units (`comoving kpc/h`), and periodic box boundaries are
+handled when selecting the region. Particles are drawn from the target's parent
+FoF halo, so the local circumgalactic environment is retained without writing
+the entire halo.
 
 The exporter writes the same particle fields requested from the web cutout API:
 
@@ -29,9 +36,10 @@ Or run it from a notebook cell:
 %run export_missing_halos.py
 ```
 
-Generated files go into `missing_halo_cutouts/`. The full batch may require
-roughly **440 GiB**, so check the free space and your writable-storage quota
-before starting.
+Generated files go into `missing_galaxy_cutouts_300kpc/`. These spatially cropped
+files should be much smaller than the roughly 440 GiB full-halo batch, although
+the exact total depends on the particle density around each galaxy. Check your
+writable-storage quota before starting.
 
 ## Useful commands
 
@@ -44,7 +52,15 @@ python export_missing_halos.py --list-targets
 Test one target first:
 
 ```bash
-python export_missing_halos.py --only 91 2
+python export_missing_halos.py --only 91 101491
+```
+
+The two values passed to `--only` are `SNAPSHOT SUBHALO`, not the parent-halo ID.
+
+Choose another physical cube width if needed:
+
+```bash
+python export_missing_halos.py --size-kpc 300
 ```
 
 Use an explicit simulation mount or destination:
@@ -52,7 +68,7 @@ Use an explicit simulation mount or destination:
 ```bash
 python export_missing_halos.py \
   --base-path ~/sims.TNG/TNG50-1/output \
-  --output-dir /path/with/enough/space/missing_halo_cutouts
+  --output-dir /path/with/enough/space/missing_galaxy_cutouts_300kpc
 ```
 
 Run it in a terminal multiplexer if available:
@@ -78,20 +94,26 @@ The job is safe to restart:
 To make a single downloadable archive after the run:
 
 ```bash
-tar -C missing_halo_cutouts -czf tng50-missing-halo-cutouts.tar.gz \
+tar -C missing_galaxy_cutouts_300kpc -czf tng50-missing-galaxy-cutouts.tar.gz \
   --exclude='*.part' --exclude='generation_status.json*' .
 ```
 
-For hundreds of GiB, downloading individual completed `.hdf5` files or using
+For large outputs, downloading individual completed `.hdf5` files or using
 `rsync`/`scp` is generally more reliable than creating one huge browser download.
 
 ## Notes
 
 - The source target list is [`targets.csv`](targets.csv).
 - Output names have the form
-  `cutout_TNG50-1_<snapshot>_halo_<halo>.hdf5`.
+  `cutout_TNG50-1_<snapshot>_<subhalo>_<parent-halo>.hdf5`, matching the existing
+  compatibility filenames used by the SKIRT campaign.
 - Snapshot `Header`, `Parameters`, and `Configuration` attributes are copied into
   each output, and particle counts are updated for the cutout.
+- Each output records its subhalo, parent halo, center, physical size, geometry,
+  and coordinate units as HDF5 root attributes.
+- The exporter loads one parent-halo field at a time, applies the spatial mask,
+  and writes only selected particles. This limits peak memory use even for the
+  largest parent halos.
 - No TNG API key is needed because this reads the Lab's mounted snapshot data.
 
 See the official TNG documentation for

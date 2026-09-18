@@ -4,6 +4,7 @@ __pycache__/
 
 # Generated data can be hundreds of GiB. Never commit it.
 missing_halo_cutouts/
+missing_galaxy_cutouts_300kpc/
 *.hdf5
 *.h5
 *.part
