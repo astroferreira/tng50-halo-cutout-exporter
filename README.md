@@ -36,6 +36,13 @@ Or run it from a notebook cell:
 %run export_missing_halos.py
 ```
 
+The default working-array memory budget is 256 MiB. For a smaller Jupyter
+kernel, start with 128 MiB:
+
+```python
+%run export_missing_halos.py --memory-budget-mib 128
+```
+
 Generated files go into `missing_galaxy_cutouts_300kpc/`. These spatially cropped
 files should be much smaller than the roughly 440 GiB full-halo batch, although
 the exact total depends on the particle density around each galaxy. Check your
@@ -62,6 +69,19 @@ Choose another physical cube width if needed:
 ```bash
 python export_missing_halos.py --size-kpc 300
 ```
+
+Put disk-backed scratch files on a specific writable filesystem and retain a
+free-space reserve:
+
+```bash
+python export_missing_halos.py \
+  --memory-budget-mib 128 \
+  --work-dir ~/tng-cutout-work \
+  --min-free-gib 5
+```
+
+Do not put `--work-dir` on `/dev/shm` or another RAM-backed filesystem. By
+default it is `OUTPUT_DIR/.work`, which is the safest choice in the Lab.
 
 Use an explicit simulation mount or destination:
 
@@ -91,6 +111,25 @@ The job is safe to restart:
   is rewritten on the next run.
 - `generation_status.json` records completed and failed targets.
 
+## Memory safety
+
+The exporter does not call `snapshot.loadHalo()` for particle data. That helper
+allocates a complete halo field before returning it, which can exceed the
+Jupyter kernel's memory limit for halos 0–3. Instead, this exporter:
+
+- obtains only the halo offsets and lengths from `illustris_python`;
+- reads the underlying snapshot pieces in bounded hyperslabs;
+- stores the full selection mask and reusable field buffers as NumPy memmaps;
+- derives chunk sizes from `--memory-budget-mib`;
+- keeps the HDF5 read cache at 1 MiB and explicitly releases each scratch
+  buffer;
+- checks output and scratch free space while retaining `--min-free-gib`; and
+- reports peak process RSS after each particle type.
+
+Scratch memmaps are removed after each particle type. If the kernel is killed,
+rerunning the same command safely truncates/reuses any stale scratch file and
+resumes the `.hdf5.part` output at the field level.
+
 To make a single downloadable archive after the run:
 
 ```bash
@@ -111,9 +150,8 @@ For large outputs, downloading individual completed `.hdf5` files or using
   each output, and particle counts are updated for the cutout.
 - Each output records its subhalo, parent halo, center, physical size, geometry,
   and coordinate units as HDF5 root attributes.
-- The exporter loads one parent-halo field at a time, applies the spatial mask,
-  and writes only selected particles. This limits peak memory use even for the
-  largest parent halos.
+- The exporter streams one bounded chunk at a time and writes only selected
+  particles; it never materializes a complete parent-halo field in RAM.
 - No TNG API key is needed because this reads the Lab's mounted snapshot data.
 
 See the official TNG documentation for

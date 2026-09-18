@@ -8,5 +8,6 @@ missing_galaxy_cutouts_300kpc/
 *.hdf5
 *.h5
 *.part
+*.mmap
 generation_status.json
 generation_status.json.tmp
