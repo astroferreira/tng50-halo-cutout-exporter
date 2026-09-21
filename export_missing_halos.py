@@ -26,11 +26,11 @@ except ImportError:  # Allow --list-targets to work outside the TNG Lab.
 
 
 DEFAULT_SIMULATION = "TNG50-1"
-DEFAULT_OUTPUT_DIR = Path("missing_galaxy_cutouts_300kpc")
+DEFAULT_OUTPUT_DIR = Path("snap99_galaxy_cutouts_300kpc")
 DEFAULT_SIZE_KPC = 300.0
 DEFAULT_MEMORY_BUDGET_MIB = 256
 DEFAULT_MIN_FREE_GIB = 5.0
-TARGETS_FILE = Path(__file__).with_name("targets.csv")
+TARGETS_FILE = Path(__file__).with_name("targets_snap99.csv")
 
 PARTICLE_FIELDS = {
     0: (
