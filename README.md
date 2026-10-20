@@ -15,12 +15,18 @@ handled when selecting the region. Particles are drawn from the target's parent
 FoF halo, so the local circumgalactic environment is retained without writing
 the entire halo.
 
-The exporter writes the same particle fields requested from the web cutout API:
+The exporter writes the fields requested from the web cutout API, plus
+velocities:
 
-- Gas (`PartType0`): `Coordinates`, `Masses`, `GFM_Metallicity`, `Density`,
-  `ElectronAbundance`, `InternalEnergy`, and `StarFormationRate`.
-- Stars/wind (`PartType4`): `Coordinates`, `GFM_StellarFormationTime`,
-  `GFM_InitialMass`, and `GFM_Metallicity`.
+- Gas (`PartType0`): `Coordinates`, `Velocities`, `Masses`, `GFM_Metallicity`,
+  `Density`, `ElectronAbundance`, `InternalEnergy`, and `StarFormationRate`.
+- Stars/wind (`PartType4`): `Coordinates`, `Velocities`,
+  `GFM_StellarFormationTime`, `GFM_InitialMass`, and `GFM_Metallicity`.
+
+`Velocities` keep the raw snapshot units, km sqrt(a)/s. Multiply by sqrt(a)
+to get peculiar velocities in km/s. Cutouts finished by an older version
+without `Velocities` are upgraded in place on the next run: only the missing
+fields are streamed and appended.
 
 ## Run in the TNG Lab
 

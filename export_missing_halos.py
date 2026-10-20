@@ -35,6 +35,7 @@ TARGETS_FILE = Path(__file__).with_name("targets_snap99.csv")
 PARTICLE_FIELDS = {
     0: (
         "Coordinates",
+        "Velocities",
         "Masses",
         "GFM_Metallicity",
         "Density",
@@ -44,6 +45,7 @@ PARTICLE_FIELDS = {
     ),
     4: (
         "Coordinates",
+        "Velocities",
         "GFM_StellarFormationTime",
         "GFM_InitialMass",
         "GFM_Metallicity",
@@ -484,6 +486,23 @@ def validate_existing_cutout(
         )
 
 
+def missing_fields(path: Path) -> list[str]:
+    """Fields in PARTICLE_FIELDS absent from a finished cutout's non-empty groups."""
+    missing = []
+    with h5py.File(path, "r", rdcc_nbytes=1024 * 1024) as source:
+        counts = np.asarray(
+            source["Header"].attrs.get("NumPart_ThisFile", np.zeros(6)), dtype=np.uint64
+        )
+        for particle_type, fields in PARTICLE_FIELDS.items():
+            if counts[particle_type] == 0:
+                continue
+            group = source.get(f"PartType{particle_type}")
+            for field in fields:
+                if group is None or field not in group:
+                    missing.append(f"PartType{particle_type}/{field}")
+    return missing
+
+
 def peak_rss_mib() -> float:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
 
@@ -518,8 +537,14 @@ def export_target(
     partial_path = final_path.with_suffix(final_path.suffix + ".part")
     if final_path.exists():
         validate_existing_cutout(final_path, target, size_kpc)
-        print(f"SKIP existing {final_path}", flush=True)
-        return final_path
+        absent = missing_fields(final_path)
+        if not absent:
+            print(f"SKIP existing {final_path}", flush=True)
+            return final_path
+        # Older cutout without newer fields: reopen it as a partial file so the
+        # field-level resume below appends only what is missing.
+        print(f"UPGRADE {final_path}: adding {', '.join(absent)}", flush=True)
+        os.replace(final_path, partial_path)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -556,6 +581,7 @@ def export_target(
         destination.attrs["CutoutSizePhysicalKpc"] = size_kpc
         destination.attrs["CutoutGeometry"] = "axis-aligned cube"
         destination.attrs["CoordinateUnits"] = "comoving kpc/h"
+        destination.attrs["VelocityUnits"] = "km sqrt(a)/s (multiply by sqrt(a) for peculiar km/s)"
         destination.attrs["MemoryBudgetMiB"] = memory_budget_mib
         destination.flush()
         copy_snapshot_metadata(source_path, destination)
