@@ -103,6 +103,17 @@ python export_missing_halos.py \
   --output-dir missing_galaxy_cutouts_300kpc
 ```
 
+Export the PMCTRL merger/control sample, preserved as
+[`targets_pmctrl100_snap50_99.csv`](targets_pmctrl100_snap50_99.csv). It lists
+the SubLink main-branch nodes of 50 post-mergers and 50 matched controls at
+every snapshot from 50 (z = 1) to 99: 4,997 galaxies in 4,703 parent halos.
+
+```bash
+python export_missing_halos.py \
+  --targets targets_pmctrl100_snap50_99.csv \
+  --output-dir pmctrl100_galaxy_cutouts_300kpc
+```
+
 Run it in a terminal multiplexer if available:
 
 ```bash
